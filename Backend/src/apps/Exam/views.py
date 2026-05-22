@@ -6,6 +6,7 @@ from src.apps.Score.models import Score
 from src.utils.response_utils import ResponseCode, api_response
 
 from .models import Exam
+from .serializers import ExamEnterRequestSerializer
 
 
 class ExamBaseView(APIView):
@@ -47,11 +48,11 @@ class ExamDetailView(APIView):
 
 class ExamEnterView(APIView):
     def post(self, request):
-        exam_id = request.data.get("exam_id")
-        student_id = request.data.get("student_id")
-
-        if not exam_id or not student_id:
-            return api_response(ResponseCode.BAD_REQUEST, "exam_id 和 student_id 为必填项")
+        serializer = ExamEnterRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return api_response(ResponseCode.BAD_REQUEST, "参数校验失败", serializer.errors)
+        exam_id = serializer.validated_data["exam_id"]
+        student_id = serializer.validated_data["student_id"]
 
         exam = Exam.objects.filter(id=exam_id, is_deleted=False, is_published=True).first()
         if exam is None:
