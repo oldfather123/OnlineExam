@@ -56,3 +56,8 @@ class ReviewScoreProcessRequestSerializer(serializers.Serializer):
     grader_id = serializers.CharField(max_length=64, required=False, allow_blank=True, default="")
     finalize = serializers.BooleanField(required=False, default=False)
     items = ReviewScoreItemSerializer(many=True)
+
+
+class PaginationQuerySerializer(serializers.Serializer):
+    page = serializers.IntegerField(required=False, min_value=1, default=1)
+    page_size = serializers.IntegerField(required=False, min_value=1, max_value=100, default=20)

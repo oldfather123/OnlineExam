@@ -4,10 +4,12 @@ from .views import (
     AnswerCommitView,
     AnswerGetView,
     AnswerGradeView,
+    ReviewAutoGradeView,
     ReviewExamResultDetailView,
     ReviewExamStudentListView,
     ReviewPaperListView,
     ReviewScoreProcessView,
+    ReviewStatisticsView,
     ScoreAnalyzeView,
     ScoreBaseView,
     ScoreDetailView,
@@ -30,6 +32,8 @@ urlpatterns = [
     # teacher review system APIs
     path("reviews/papers", ReviewPaperListView.as_view(), name="review-paper-list"),
     path("reviews/exams/<str:exam_id>/students", ReviewExamStudentListView.as_view(), name="review-exam-students"),
+    path("reviews/exams/<str:exam_id>/statistics", ReviewStatisticsView.as_view(), name="review-exam-statistics"),
     path("reviews/exam-results/<str:exam_result_id>", ReviewExamResultDetailView.as_view(), name="review-exam-result-detail"),
+    path("reviews/exam-results/<str:exam_result_id>/auto-grade", ReviewAutoGradeView.as_view(), name="review-auto-grade"),
     path("reviews/exam-results/<str:exam_result_id>/grade", ReviewScoreProcessView.as_view(), name="review-score-process"),
 ]

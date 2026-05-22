@@ -1,4 +1,7 @@
-﻿from django.db import transaction
+﻿from collections import defaultdict
+
+from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Count, Q, Sum
 from django.utils import timezone
 from rest_framework.views import APIView
@@ -12,6 +15,7 @@ from .models import Answer, Score, ScoreDetail
 from .serializers import (
     AnswerCommitRequestSerializer,
     AnswerCommitStatusQuerySerializer,
+    PaginationQuerySerializer,
     ReviewScoreProcessRequestSerializer,
 )
 
@@ -76,24 +80,6 @@ class ScoreDetailView(APIView):
 
 
 class AnswerCommitView(APIView):
-    """
-    Unified answer payload format:
-    {
-      "exam_result_id": "..."  # or exam_id + student_id
-      "exam_id": "...",
-      "student_id": "...",
-      "action": "save" | "submit",
-      "client_ts": 1710000000000,
-      "answers": [
-        {
-          "question_id": "...",
-          "type": "select|blank|subjective",
-          "payload": {"value": "A", "meta": {"index": 1}}
-        }
-      ]
-    }
-    """
-
     @transaction.atomic
     def post(self, request):
         serializer = AnswerCommitRequestSerializer(data=request.data)
@@ -108,7 +94,6 @@ class AnswerCommitView(APIView):
         if score is None:
             return api_response(ResponseCode.NOT_FOUND, "考试记录不存在，请先进入考试")
 
-        # consistency check to avoid out-of-order overwrite
         if client_ts < score.last_client_ts:
             return api_response(
                 ResponseCode.CONFLICT,
@@ -124,7 +109,6 @@ class AnswerCommitView(APIView):
             )
 
         answers = payload.get("answers", [])
-
         now = timezone.now()
         for item in answers:
             question_id = item["question_id"]
@@ -147,15 +131,7 @@ class AnswerCommitView(APIView):
                 answer.answer_payload = answer_payload if isinstance(answer_payload, dict) else {"value": answer_payload}
                 answer.solution = str(answer.answer_payload.get("value", ""))
                 answer.last_client_ts = client_ts
-                answer.save(
-                    update_fields=[
-                        "answer_type",
-                        "answer_payload",
-                        "solution",
-                        "last_client_ts",
-                        "updated_at",
-                    ]
-                )
+                answer.save(update_fields=["answer_type", "answer_payload", "solution", "last_client_ts", "updated_at"])
 
         score.last_client_ts = client_ts
         score.last_save_at = now
@@ -233,11 +209,17 @@ class ScoreAnalyzeView(APIView):
 
 
 class ReviewPaperListView(APIView):
-    """Module: paper management for teacher review."""
-
     def get(self, request):
-        exams = Exam.objects.filter(is_deleted=False, is_published=True).order_by("-start_time")
-        exam_ids = [e.id for e in exams]
+        page_ser = PaginationQuerySerializer(data=request.query_params)
+        if not page_ser.is_valid():
+            return api_response(ResponseCode.BAD_REQUEST, "参数校验失败", page_ser.errors)
+        page = page_ser.validated_data["page"]
+        page_size = page_ser.validated_data["page_size"]
+
+        exams = list(Exam.objects.filter(is_deleted=False, is_published=True).order_by("-start_time").values(
+            "id", "title", "start_time", "end_time", "paper_id"
+        ))
+        exam_ids = [e["id"] for e in exams]
 
         stats = {
             row["exam_id"]: row
@@ -246,21 +228,21 @@ class ReviewPaperListView(APIView):
             .annotate(total_students=Count("id"), submitted_students=Count("id", filter=Q(submit_status=True)))
         }
 
-        paper_ids = [e.paper_id for e in exams]
-        papers = {p.id: p for p in Paper.objects.filter(id__in=paper_ids)}
+        paper_ids = [e["paper_id"] for e in exams]
+        papers = {p.id: p for p in Paper.objects.filter(id__in=paper_ids).only("id", "title")}
 
-        data = []
+        rows = []
         for exam in exams:
-            paper = papers.get(exam.paper_id)
-            s = stats.get(exam.id, {})
-            data.append(
+            paper = papers.get(exam["paper_id"])
+            s = stats.get(exam["id"], {})
+            rows.append(
                 {
-                    "exam_id": exam.id,
-                    "exam_title": exam.title,
-                    "start_time": exam.start_time,
-                    "end_time": exam.end_time,
+                    "exam_id": exam["id"],
+                    "exam_title": exam["title"],
+                    "start_time": exam["start_time"],
+                    "end_time": exam["end_time"],
                     "paper": {
-                        "paper_id": exam.paper_id,
+                        "paper_id": exam["paper_id"],
                         "title": paper.title if paper else "",
                     },
                     "review_stats": {
@@ -269,48 +251,74 @@ class ReviewPaperListView(APIView):
                     },
                 }
             )
-        return api_response(ResponseCode.SUCCESS, "获取批阅试卷列表成功", data)
+
+        paginator = Paginator(rows, page_size)
+        page_obj = paginator.get_page(page)
+        return api_response(
+            ResponseCode.SUCCESS,
+            "获取批阅试卷列表成功",
+            {"total": paginator.count, "page": page_obj.number, "page_size": page_size, "items": list(page_obj.object_list)},
+        )
 
 
 class ReviewExamStudentListView(APIView):
-    """Module: answer sheet overview."""
-
     def get(self, request, exam_id):
-        exam = Exam.objects.filter(id=exam_id).first()
-        if exam is None:
+        page_ser = PaginationQuerySerializer(data=request.query_params)
+        if not page_ser.is_valid():
+            return api_response(ResponseCode.BAD_REQUEST, "参数校验失败", page_ser.errors)
+        page = page_ser.validated_data["page"]
+        page_size = page_ser.validated_data["page_size"]
+
+        if not Exam.objects.filter(id=exam_id).exists():
             return api_response(ResponseCode.NOT_FOUND, "考试不存在")
 
-        queryset = Score.objects.filter(exam_id=exam_id).order_by("student_id")
-        data = [
+        queryset = list(
+            Score.objects.filter(exam_id=exam_id)
+            .order_by("student_id")
+            .values("id", "student_id", "submit_status", "start_time", "submitted_at", "result_mark")
+        )
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page)
+        items = [
             {
-                "exam_result_id": s.id,
-                "student_id": s.student_id,
-                "submit_status": s.submit_status,
-                "start_time": s.start_time,
-                "submitted_at": s.submitted_at,
-                "result_mark": s.result_mark,
+                "exam_result_id": s["id"],
+                "student_id": s["student_id"],
+                "submit_status": s["submit_status"],
+                "start_time": s["start_time"],
+                "submitted_at": s["submitted_at"],
+                "result_mark": s["result_mark"],
             }
-            for s in queryset
+            for s in page_obj.object_list
         ]
-        return api_response(ResponseCode.SUCCESS, "获取考生答卷列表成功", data)
+        return api_response(
+            ResponseCode.SUCCESS,
+            "获取考生答卷列表成功",
+            {"total": paginator.count, "page": page_obj.number, "page_size": page_size, "items": items},
+        )
 
 
 class ReviewExamResultDetailView(APIView):
     def get(self, request, exam_result_id):
-        score = Score.objects.filter(id=exam_result_id).first()
+        score = Score.objects.filter(id=exam_result_id).only("id", "exam_id", "student_id", "submit_status", "submitted_at", "result_mark").first()
         if score is None:
             return api_response(ResponseCode.NOT_FOUND, "考试记录不存在")
 
-        exam = Exam.objects.filter(id=score.exam_id).first()
+        exam = Exam.objects.filter(id=score.exam_id).only("id", "paper_id").first()
         if exam is None:
             return api_response(ResponseCode.NOT_FOUND, "考试不存在")
 
-        pq_list = list(PaperQuestions.objects.filter(paper_id=exam.paper_id).order_by("sequence_number").values())
+        pq_list = list(PaperQuestions.objects.filter(paper_id=exam.paper_id).order_by("sequence_number").values("question_id", "marks"))
         question_ids = [x["question_id"] for x in pq_list]
-        q_map = {q.id: q for q in Questions.objects.filter(id__in=question_ids)}
+        q_map = {q.id: q for q in Questions.objects.filter(id__in=question_ids).only("id", "topic", "type", "answer")}
 
-        answers = {a.question_id: a for a in Answer.objects.filter(exam_result_id=exam_result_id)}
-        score_details = {d.question_id: d for d in ScoreDetail.objects.filter(exam_result_id=exam_result_id)}
+        answers = {
+            a.question_id: a
+            for a in Answer.objects.filter(exam_result_id=exam_result_id, question_id__in=question_ids).only("question_id", "answer_payload")
+        }
+        score_details = {
+            d.question_id: d
+            for d in ScoreDetail.objects.filter(exam_result_id=exam_result_id, question_id__in=question_ids).only("question_id", "mark", "comment")
+        }
 
         items = []
         for pq in pq_list:
@@ -350,8 +358,6 @@ class ReviewExamResultDetailView(APIView):
 
 
 class ReviewScoreProcessView(APIView):
-    """Module: score processing."""
-
     @transaction.atomic
     def post(self, request, exam_result_id):
         serializer = ReviewScoreProcessRequestSerializer(data=request.data)
@@ -376,12 +382,7 @@ class ReviewScoreProcessView(APIView):
             detail, _ = ScoreDetail.objects.get_or_create(
                 exam_result_id=exam_result_id,
                 question_id=qid,
-                defaults={
-                    "mark": mark,
-                    "comment": comment,
-                    "graded_by": grader_id,
-                    "graded_at": now,
-                },
+                defaults={"mark": mark, "comment": comment, "graded_by": grader_id, "graded_at": now},
             )
             detail.mark = mark
             detail.comment = comment
@@ -389,10 +390,7 @@ class ReviewScoreProcessView(APIView):
             detail.graded_at = now
             detail.save(update_fields=["mark", "comment", "graded_by", "graded_at"])
 
-        total = (
-            ScoreDetail.objects.filter(exam_result_id=exam_result_id).aggregate(total_mark=Sum("mark")).get("total_mark")
-            or 0
-        )
+        total = ScoreDetail.objects.filter(exam_result_id=exam_result_id).aggregate(total_mark=Sum("mark")).get("total_mark") or 0
         score.result_mark = float(total)
         if finalize and score.end_time is None:
             score.end_time = now
@@ -403,3 +401,138 @@ class ReviewScoreProcessView(APIView):
             "评分处理成功",
             {"exam_result_id": score.id, "result_mark": score.result_mark, "finalize": finalize},
         )
+
+
+class ReviewAutoGradeView(APIView):
+    @transaction.atomic
+    def post(self, request, exam_result_id):
+        score = Score.objects.select_for_update().filter(id=exam_result_id).first()
+        if score is None:
+            return api_response(ResponseCode.NOT_FOUND, "考试记录不存在")
+
+        exam = Exam.objects.filter(id=score.exam_id).only("id", "paper_id").first()
+        if exam is None:
+            return api_response(ResponseCode.NOT_FOUND, "考试不存在")
+
+        pq_list = list(PaperQuestions.objects.filter(paper_id=exam.paper_id).values("question_id", "marks"))
+        q_ids = [x["question_id"] for x in pq_list]
+        q_map = {q.id: q for q in Questions.objects.filter(id__in=q_ids).only("id", "type", "answer")}
+        marks_map = {x["question_id"]: float(x["marks"]) for x in pq_list}
+        answers = {a.question_id: a for a in Answer.objects.filter(exam_result_id=exam_result_id, question_id__in=q_ids).only("question_id", "answer_payload")}
+
+        graded = 0
+        subjective_pending = 0
+        now = timezone.now()
+        for qid in q_ids:
+            q = q_map.get(qid)
+            if q is None:
+                continue
+            if q.type not in ["select", "judge"]:
+                subjective_pending += 1
+                continue
+
+            ans = answers.get(qid)
+            student_val = self._normalize_answer(ans.answer_payload if ans else {})
+            standard_val = self._normalize_answer({"value": q.answer})
+            mark = marks_map.get(qid, 0.0) if student_val == standard_val else 0.0
+
+            detail, _ = ScoreDetail.objects.get_or_create(
+                exam_result_id=exam_result_id,
+                question_id=qid,
+                defaults={"mark": mark, "comment": "自动判分", "graded_by": "system", "graded_at": now},
+            )
+            detail.mark = mark
+            detail.comment = "自动判分"
+            detail.graded_by = "system"
+            detail.graded_at = now
+            detail.save(update_fields=["mark", "comment", "graded_by", "graded_at"])
+            graded += 1
+
+        total = ScoreDetail.objects.filter(exam_result_id=exam_result_id).aggregate(total_mark=Sum("mark")).get("total_mark") or 0
+        score.result_mark = float(total)
+        score.save(update_fields=["result_mark", "updated_at"])
+
+        return api_response(
+            ResponseCode.SUCCESS,
+            "客观题自动判分完成",
+            {
+                "exam_result_id": exam_result_id,
+                "auto_graded_count": graded,
+                "subjective_pending_count": subjective_pending,
+                "result_mark": score.result_mark,
+            },
+        )
+
+    def _normalize_answer(self, payload):
+        if isinstance(payload, dict):
+            value = payload.get("value", "")
+        else:
+            value = payload
+        if isinstance(value, list):
+            value = ",".join(str(x).strip().upper() for x in value)
+        return str(value).strip().upper()
+
+
+class ReviewStatisticsView(APIView):
+    def get(self, request, exam_id):
+        exam = Exam.objects.filter(id=exam_id).only("id", "paper_id").first()
+        if exam is None:
+            return api_response(ResponseCode.NOT_FOUND, "考试不存在")
+
+        scores = list(Score.objects.filter(exam_id=exam_id).values("id", "student_id", "result_mark", "submit_status"))
+        result_ids = [x["id"] for x in scores]
+
+        details = list(ScoreDetail.objects.filter(exam_result_id__in=result_ids).values("exam_result_id", "question_id", "mark"))
+        pq_list = list(PaperQuestions.objects.filter(paper_id=exam.paper_id).values("question_id", "marks"))
+        q_map = {q.id: q for q in Questions.objects.filter(id__in=[x["question_id"] for x in pq_list]).only("id", "type")}
+        pq_mark_map = {x["question_id"]: float(x["marks"]) for x in pq_list}
+
+        student_summary = [
+            {
+                "exam_result_id": s["id"],
+                "student_id": s["student_id"],
+                "submit_status": s["submit_status"],
+                "total_score": float(s["result_mark"] or 0),
+            }
+            for s in scores
+        ]
+
+        type_stat = {}
+        for qid, q in q_map.items():
+            q_type = q.type
+            if q_type not in type_stat:
+                type_stat[q_type] = {"full_mark": 0.0, "actual_mark": 0.0}
+            type_stat[q_type]["full_mark"] += pq_mark_map.get(qid, 0.0)
+
+        for d in details:
+            q = q_map.get(d["question_id"])
+            if not q:
+                continue
+            q_type = q.type
+            if q_type not in type_stat:
+                type_stat[q_type] = {"full_mark": 0.0, "actual_mark": 0.0}
+            type_stat[q_type]["actual_mark"] += float(d["mark"] or 0)
+
+        for t in type_stat:
+            full_mark = type_stat[t]["full_mark"]
+            actual_mark = type_stat[t]["actual_mark"]
+            type_stat[t]["score_rate"] = 0 if full_mark == 0 else round(actual_mark / full_mark, 4)
+
+        submitted = [x for x in scores if x["submit_status"]]
+        avg_score = 0.0
+        if submitted:
+            avg_score = round(sum(float(x["result_mark"] or 0) for x in submitted) / len(submitted), 2)
+
+        return api_response(
+            ResponseCode.SUCCESS,
+            "获取成绩统计成功",
+            {
+                "exam_id": exam_id,
+                "student_count": len(scores),
+                "submitted_count": len(submitted),
+                "average_score": avg_score,
+                "student_summary": student_summary,
+                "question_type_stats": type_stat,
+            },
+        )
+
