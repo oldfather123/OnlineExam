@@ -1,4 +1,4 @@
-﻿from collections import defaultdict
+from collections import defaultdict
 
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -205,7 +205,92 @@ class AnswerCommitView(APIView):
 
 class ScoreAnalyzeView(APIView):
     def get(self, request):
-        return api_response(ResponseCode.METHOD_NOT_ALLOWED, "暂未实现")
+        student_id = request.query_params.get("student_id")
+        if not student_id:
+            return api_response(ResponseCode.BAD_REQUEST, "student_id 为必填项")
+
+        scores = list(Score.objects.filter(student_id=student_id).order_by("-start_time").values(
+            "id", "exam_id", "result_mark", "submit_status", "start_time", "submitted_at"
+        ))
+        if not scores:
+            return api_response(
+                ResponseCode.SUCCESS,
+                "获取学习分析成功",
+                {
+                    "student_id": student_id,
+                    "exam_count": 0,
+                    "submitted_count": 0,
+                    "average_score": 0,
+                    "trend": [],
+                    "question_type_stats": {},
+                },
+            )
+
+        exam_ids = [s["exam_id"] for s in scores]
+        exams = {e.id: e for e in Exam.objects.filter(id__in=exam_ids).only("id", "title", "paper_id")}
+
+        submitted = [x for x in scores if x["submit_status"]]
+        average_score = round(sum(float(x["result_mark"] or 0) for x in submitted) / len(submitted), 2) if submitted else 0
+
+        trend = []
+        result_ids = [s["id"] for s in scores]
+        details = list(ScoreDetail.objects.filter(exam_result_id__in=result_ids).values("exam_result_id", "question_id", "mark"))
+
+        score_to_exam = {s["id"]: s["exam_id"] for s in scores}
+        exam_qid_set = defaultdict(set)
+        for exam in exams.values():
+            for row in PaperQuestions.objects.filter(paper_id=exam.paper_id).values("question_id"):
+                exam_qid_set[exam.id].add(row["question_id"])
+
+        all_qids = set()
+        for s in exam_qid_set.values():
+            all_qids |= s
+        q_types = {q.id: q.type for q in Questions.objects.filter(id__in=list(all_qids)).only("id", "type")}
+
+        type_stat = defaultdict(lambda: {"full_mark": 0.0, "actual_mark": 0.0})
+        for exam in exams.values():
+            for row in PaperQuestions.objects.filter(paper_id=exam.paper_id).values("question_id", "marks"):
+                q_type = q_types.get(row["question_id"], "unknown")
+                type_stat[q_type]["full_mark"] += float(row["marks"] or 0)
+
+        for row in details:
+            exam_id = score_to_exam.get(row["exam_result_id"])
+            if not exam_id:
+                continue
+            q_type = q_types.get(row["question_id"], "unknown")
+            type_stat[q_type]["actual_mark"] += float(row["mark"] or 0)
+
+        question_type_stats = {}
+        for k, v in type_stat.items():
+            rate = 0 if v["full_mark"] == 0 else round(v["actual_mark"] / v["full_mark"], 4)
+            question_type_stats[k] = {**v, "score_rate": rate}
+
+        for s in scores:
+            e = exams.get(s["exam_id"])
+            trend.append(
+                {
+                    "exam_result_id": s["id"],
+                    "exam_id": s["exam_id"],
+                    "exam_title": e.title if e else "",
+                    "score": float(s["result_mark"] or 0),
+                    "submit_status": s["submit_status"],
+                    "start_time": s["start_time"],
+                    "submitted_at": s["submitted_at"],
+                }
+            )
+
+        return api_response(
+            ResponseCode.SUCCESS,
+            "获取学习分析成功",
+            {
+                "student_id": student_id,
+                "exam_count": len(scores),
+                "submitted_count": len(submitted),
+                "average_score": average_score,
+                "trend": trend,
+                "question_type_stats": question_type_stats,
+            },
+        )
 
 
 class ReviewPaperListView(APIView):
