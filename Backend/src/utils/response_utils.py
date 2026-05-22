@@ -18,4 +18,13 @@ class ResponseCode(Enum):
 
 
 def api_response(code, msg, data=None):
-    pass
+    status_code = code.value if isinstance(code, ResponseCode) else int(code)
+    return JsonResponse(
+        {
+            "code": status_code,
+            "msg": msg,
+            "data": data,
+        },
+        status=status_code,
+        safe=False,
+    )

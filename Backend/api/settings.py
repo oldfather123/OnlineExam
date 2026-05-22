@@ -1,12 +1,13 @@
 ﻿"""Django settings for ExamOnline project."""
 
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "你的Django密钥"
-DEBUG = True
-ALLOWED_HOSTS = []
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key")
+DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
+ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
     "django.contrib.auth",
@@ -25,22 +26,32 @@ MIDDLEWARE = []
 ROOT_URLCONF = "api.urls"
 WSGI_APPLICATION = "api.wsgi.application"
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "你的数据库名称",
-        "USER": "root",
-        "PASSWORD": "你的数据库密码",
-        "HOST": "127.0.0.1",
-        "PORT": "3306",
-        "TIME_ZONE": "Asia/Shanghai",
-    }
-}
+DB_ENGINE = os.getenv("DB_ENGINE", "sqlite").lower()
 
-LANGUAGE_CODE = "en-us"
+if DB_ENGINE == "mysql":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.getenv("DB_NAME", "examonline"),
+            "USER": os.getenv("DB_USER", "root"),
+            "PASSWORD": os.getenv("DB_PASSWORD", ""),
+            "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+            "PORT": os.getenv("DB_PORT", "3306"),
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+
+LANGUAGE_CODE = "zh-hans"
 TIME_ZONE = "Asia/Shanghai"
 USE_I18N = True
 USE_TZ = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EXAM_RESULT_ROOT = "ExamResultFiles/"
+

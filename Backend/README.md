@@ -1,96 +1,90 @@
-# OnlineExam 后端
+﻿# OnlineExam Backend
 
-## 1. 入口和顶层文件
+第一阶段已完成内容：
+1. 系统数据库准备（模型 + 迁移）
+2. 提供前端请求接口
+3. 后端进入考试与获取试卷接口
 
-### 1.1 `api`目录入口文件
+## 1. 数据库准备
 
-- `api/settings.py`
-  - Django 全局配置入口。
-  - 包含数据库配置、已安装应用、时区、默认主键类型等。
+默认使用 SQLite（开箱即用）。
 
-- `api/urls.py`
-  - 项目总路由入口。
-  - 将 `src/apps` 下各应用路由统一挂载到 `/api/` 前缀。
+```powershell
+cd OnlineExam/Backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+python manage.py makemigrations User Question Paper Exam Score
+python manage.py migrate
+```
 
-- `api/asgi.py`
-  - ASGI 服务器入口。
+如果要改为 MySQL，先设置环境变量再迁移：
 
-- `api/wsgi.py`
-  - WSGI 服务器入口。
+```powershell
+$env:DB_ENGINE="mysql"
+$env:DB_NAME="examonline"
+$env:DB_USER="root"
+$env:DB_PASSWORD="你的密码"
+$env:DB_HOST="127.0.0.1"
+$env:DB_PORT="3306"
+python manage.py migrate
+```
 
-### 1.2 顶层文件
+## 2. 第一阶段接口
 
-- `manage.py`
-  - Django 命令入口（迁移、启动、检查等）。
+### 2.1 进入考试
+- 方法：`POST`
+- 路径：`/api/exams/enter`
+- 请求体：
 
-- `src/utils/response_utils.py`
-  - 统一接口响应结构与状态码封装，用于查看后端服务结果。
+```json
+{
+  "exam_id": "考试ID",
+  "student_id": "学生ID"
+}
+```
 
----
+- 功能：
+  - 校验考试是否存在/已发布/在考试时间内
+  - 校验考试关联试卷是否存在并已发布
+  - 初始化考试记录（`exam_result`），记录开始时间
 
-## 2. 应用功能框架说明
+### 2.2 获取试卷
+- 方法：`GET`
+- 路径：`/api/papers/online`
+- 参数：`paper_id` 或 `exam_id` 二选一
 
-每个应用包含：
-- `apps.py` （Django服务调用）
-- `models.py`（数据模型）
-- `serializers.py`（数据校验与转换）
-- `views.py`（接口处理）
-- `urls.py`（路由映射）
+示例：
+- `/api/papers/online?paper_id=xxx`
+- `/api/papers/online?exam_id=xxx`
 
-### 2.1 `src/apps/User`
+- 返回内容：
+  - 试卷基本信息
+  - 按模块组织的题目数据（题干、选项、题型、分值、顺序）
 
-负责用户的登录、管理、修改。
+## 3. 如何验证后端服务成功启动
 
-- 教师/学生登录：
-  - `TeacherLoginView`
-  - `StudentLoginView`
-- 教师/学生用户管理：
-  - `TeacherUserView`
-  - `StudentUserView`
-- 教师/学生密码修改：
-  - `TeacherChangePasswordView`
-  - `StudentChangePasswordView`
+### 3.1 运行服务
 
-### 2.2 `src/apps/Question`
+```powershell
+python manage.py runserver 127.0.0.1:8000
+```
 
-负责教师题库管理、学生错题集管理。
+### 3.2 启动成功标志
+出现如下信息即成功：
+- `Starting development server at http://127.0.0.1:8000/`
 
-- 题目管理：`QuestionBaseView`
-- 错题集管理：`ErrorArchiveView`
-- 组卷可用题目查询：`QuestionsPaperView`
-- Agent 辅助选题：`AgentSelectQuestionsView`
+### 3.3 接口联调快速验证
 
-### 2.3 `src/apps/Paper`
+1. 先做基础检查（无语法错误）：
+```powershell
+python manage.py check
+```
 
-负责试卷管理、发布，以及学生参加考试时查看试卷。
+2. 用 `curl` 验证接口可达（示例）：
+```powershell
+curl "http://127.0.0.1:8000/api/papers/online?paper_id=test"
+```
 
-- 试卷管理：`PaperBaseView`
-- 试卷模块管理：`PaperModuleView`
-- 试卷题目管理：`PaperQuestionsView`
-- 试卷发布：`PaperPublishView`
-- 安排考试时试卷选择：`PaperForSelectorView`
-- 试卷详情查看：`PaperDetailView`
-
-### 2.4 `src/apps/Exam`
-
-负责考试管理、发布，学生查看考试安排和进入考试。
-
-- 考试管理：`ExamBaseView`
-- 考试发布：`ExamPublishView`
-- 考试参加情况查询：`ExamAttendView`
-- 学生端考试时间查询：`ExamScheduleView`
-- 考试详情查看：`ExamDetailView`
-
-### 2.5 `src/apps/Score`
-
-负责成绩管理、答案提交与批改、成绩分析。
-
-- 成绩管理：`ScoreBaseView`
-- 成绩详情：`ScoreDetailView`
-- 答案获取：`AnswerGetView`
-- 答案批改：`AnswerGradeView`
-- 答案提交：`AnswerCommitView`
-- Agent 辅助成绩分析：`ScoreAnalyzeView`
-
----
+返回 JSON（即使是业务错误码）说明服务已正常启动并能处理请求。
 
