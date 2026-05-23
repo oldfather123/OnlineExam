@@ -37,13 +37,13 @@ const router = createRouter({
         {
           path: "exams",
           name: "exams",
-          component: () => import("@/views/PlaceholderView.vue"),
+          component: () => import("@/views/exams/ExamTakingView.vue"),
           meta: { title: "考试管理", module: "exams" },
         },
         {
           path: "reviews",
           name: "reviews",
-          component: () => import("@/views/PlaceholderView.vue"),
+          component: () => import("@/views/reviews/ReviewsView.vue"),
           meta: { title: "阅卷中心", module: "reviews" },
         },
       ],
