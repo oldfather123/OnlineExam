@@ -48,6 +48,12 @@ const router = createRouter({
           meta: { title: "考试管理", module: "exams", roles: ["teacher", "student"] },
         },
         {
+          path: "analysis",
+          name: "analysis",
+          component: () => import("@/views/analysis/AnalysisView.vue"),
+          meta: { title: "成绩分析", module: "analysis", roles: ["student"] },
+        },
+        {
           path: "reviews",
           name: "reviews",
           component: () => import("@/views/reviews/ReviewsView.vue"),

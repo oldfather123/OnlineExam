@@ -544,6 +544,41 @@ a {
   gap: 12px;
 }
 
+.analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+  gap: 18px;
+}
+
+.type-score-list {
+  display: grid;
+  gap: 18px;
+  padding-top: 12px;
+}
+
+.type-score-row {
+  display: grid;
+  gap: 10px;
+}
+
+.type-score-row > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.type-score-row span,
+.empty-soft {
+  color: #5e6b7c;
+}
+
+.empty-soft {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     display: block;
@@ -601,6 +636,7 @@ a {
   }
 
   .review-layout,
+  .analysis-grid,
   .grade-row {
     grid-template-columns: 1fr;
   }

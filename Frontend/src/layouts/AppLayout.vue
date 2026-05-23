@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BookOpenCheck, ClipboardList, FileQuestion, LayoutDashboard, LogOut, PenLine, ScrollText, UsersRound } from "lucide-vue-next";
+import { BookOpenCheck, ClipboardList, FileQuestion, LayoutDashboard, LogOut, PenLine, ScrollText, TrendingUp, UsersRound } from "lucide-vue-next";
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -14,6 +14,7 @@ const menuItems = [
   { path: "/questions", label: "题库管理", icon: FileQuestion, roles: ["teacher"] },
   { path: "/papers", label: "试卷管理", icon: ScrollText, roles: ["teacher"] },
   { path: "/exams", label: "考试管理", icon: ClipboardList, roles: ["teacher", "student"] },
+  { path: "/analysis", label: "成绩分析", icon: TrendingUp, roles: ["student"] },
   { path: "/reviews", label: "阅卷中心", icon: PenLine, roles: ["teacher"] },
   { path: "/users", label: "用户管理", icon: UsersRound, roles: ["teacher"] },
 ];

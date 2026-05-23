@@ -87,6 +87,23 @@ export interface PageItems<T> {
   items: T[];
 }
 
+export interface ScoreAnalyzeResult {
+  student_id: string;
+  exam_count: number;
+  submitted_count: number;
+  average_score: number;
+  trend: Array<{
+    exam_result_id: string;
+    exam_id: string;
+    exam_title: string;
+    score: number;
+    submit_status: boolean;
+    start_time: string | null;
+    submitted_at: string | null;
+  }>;
+  question_type_stats: Record<string, { full_mark: number; actual_mark: number; score_rate: number }>;
+}
+
 export function commitAnswers(data: AnswerCommitPayload) {
   return request<{
     exam_result_id: string;
@@ -155,5 +172,13 @@ export function submitReviewScores(
     url: `/reviews/exam-results/${examResultId}/grade`,
     method: "POST",
     data,
+  });
+}
+
+export function getScoreAnalyze(studentId: string) {
+  return request<ScoreAnalyzeResult>({
+    url: "/scores/analyze",
+    method: "GET",
+    params: { student_id: studentId },
   });
 }
