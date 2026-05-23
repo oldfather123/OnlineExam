@@ -56,6 +56,13 @@ export function getPapers(params: PaperQuery) {
   });
 }
 
+export function getPaperSelector() {
+  return request<PageResult<Paper>>({
+    url: "/papers/selector",
+    method: "GET",
+  });
+}
+
 export function getPaper(id: string) {
   return request<Paper>({
     url: `/papers/${id}`,

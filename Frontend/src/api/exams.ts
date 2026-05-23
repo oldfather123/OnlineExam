@@ -1,4 +1,33 @@
 import { request } from "./http";
+import type { PageResult } from "./questions";
+
+export interface Exam {
+  id: string;
+  paper_id: string;
+  paper_title?: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  is_published: boolean;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExamQuery {
+  title?: string;
+  is_published?: "true" | "false" | "";
+  currentPage?: number;
+  pageSize?: number;
+}
+
+export interface ExamPayload {
+  paper_id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  is_published: boolean;
+}
 
 export interface ExamEnterPayload {
   exam_id: string;
@@ -46,6 +75,58 @@ export function enterExam(data: ExamEnterPayload) {
     url: "/exams/enter",
     method: "POST",
     data,
+  });
+}
+
+export function getExams(params: ExamQuery) {
+  return request<PageResult<Exam>>({
+    url: "/exams",
+    method: "GET",
+    params,
+  });
+}
+
+export function createExam(data: ExamPayload) {
+  return request<Exam>({
+    url: "/exams",
+    method: "POST",
+    data,
+  });
+}
+
+export function updateExam(id: string, data: Partial<ExamPayload>) {
+  return request<Exam>({
+    url: `/exams/${id}`,
+    method: "PUT",
+    data,
+  });
+}
+
+export function deleteExam(id: string) {
+  return request<null>({
+    url: `/exams/${id}`,
+    method: "DELETE",
+  });
+}
+
+export function publishExam(id: string) {
+  return request<null>({
+    url: `/exams/publish/${id}`,
+    method: "POST",
+  });
+}
+
+export function unpublishExam(id: string) {
+  return request<null>({
+    url: `/exams/publish/${id}`,
+    method: "DELETE",
+  });
+}
+
+export function getAttendableExams() {
+  return request<PageResult<Exam>>({
+    url: "/exams/attend",
+    method: "GET",
   });
 }
 

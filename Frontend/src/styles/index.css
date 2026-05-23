@@ -368,6 +368,19 @@ a {
   justify-content: flex-end;
 }
 
+.workspace-tabs {
+  display: grid;
+  gap: 12px;
+}
+
+.workspace-tabs .el-tabs__content {
+  overflow: visible;
+}
+
+.full-control {
+  width: 100%;
+}
+
 .question-block,
 .review-question {
   display: grid;
