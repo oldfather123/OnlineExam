@@ -21,6 +21,7 @@ import {
 } from "@/api/exams";
 import { getPaperSelector, type Paper } from "@/api/papers";
 import { commitAnswers, type AnswerItem } from "@/api/scores";
+import { useSessionStore } from "@/stores/session";
 
 interface EnterForm {
   exam_id: string;
@@ -28,6 +29,7 @@ interface EnterForm {
 }
 
 const activeTab = ref("manage");
+const session = useSessionStore();
 const loading = ref(false);
 const savingExam = ref(false);
 const statusChanging = ref("");
@@ -63,7 +65,7 @@ const examForm = reactive<ExamPayload>({
 
 const enterForm = reactive<EnterForm>({
   exam_id: "",
-  student_id: "",
+  student_id: session.role === "student" ? session.user?.id || "" : "",
 });
 
 const examRules: FormRules<ExamPayload> = {
@@ -273,6 +275,10 @@ async function saveAnswers(action: "save" | "submit") {
 }
 
 onMounted(() => {
+  if (session.role === "student") {
+    activeTab.value = "taking";
+    enterForm.student_id = session.user?.id || "";
+  }
   void Promise.all([loadExams(), loadPapers(), loadAttendableExams()]);
 });
 </script>
@@ -280,7 +286,7 @@ onMounted(() => {
 <template>
   <section class="page-stack">
     <el-tabs v-model="activeTab" class="workspace-tabs">
-      <el-tab-pane label="考试管理" name="manage">
+      <el-tab-pane v-if="session.role === 'teacher'" label="考试管理" name="manage">
         <div class="toolbar-panel">
           <el-form :model="query" class="query-form" inline>
             <el-form-item label="考试名称">
@@ -352,7 +358,7 @@ onMounted(() => {
               <el-input v-model="enterForm.exam_id" placeholder="从列表选择或手动输入" />
             </el-form-item>
             <el-form-item label="学生 ID" prop="student_id">
-              <el-input v-model="enterForm.student_id" placeholder="请输入学生 ID" />
+              <el-input v-model="enterForm.student_id" :disabled="session.role === 'student'" placeholder="请输入学生 ID" />
             </el-form-item>
             <el-form-item>
               <el-button type="primary" :icon="ClipboardCheck" :loading="entering" @click="handleEnter">进入考试</el-button>

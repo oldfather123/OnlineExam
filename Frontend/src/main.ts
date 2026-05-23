@@ -5,6 +5,12 @@ import { createApp } from "vue";
 
 import App from "./App.vue";
 import router from "./router";
+import { useSessionStore } from "./stores/session";
 import "./styles/index.css";
 
-createApp(App).use(createPinia()).use(router).use(ElementPlus).mount("#app");
+const app = createApp(App);
+const pinia = createPinia();
+
+app.use(pinia).use(router).use(ElementPlus);
+useSessionStore().restore();
+app.mount("#app");
