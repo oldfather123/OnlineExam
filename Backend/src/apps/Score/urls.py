@@ -18,10 +18,10 @@ from .views import (
 
 urlpatterns = [
     path("scores", ScoreBaseView.as_view(), name="score-list-create"),
-    path("scores/<str:id>", ScoreBaseView.as_view(), name="score-detail"),
+    path("scores/analyze", ScoreAnalyzeView.as_view(), name="score-analyze"),
     path("scores/detail", ScoreDetailView.as_view(), name="score-detail-view"),
     path("scores/detail/<str:id>", ScoreDetailView.as_view(), name="score-detail-item"),
-    path("scores/analyze", ScoreAnalyzeView.as_view(), name="score-analyze"),
+    path("scores/<str:id>", ScoreBaseView.as_view(), name="score-detail"),
     path("dashboard/summary", DashboardSummaryView.as_view(), name="dashboard-summary"),
 
     # student answer APIs

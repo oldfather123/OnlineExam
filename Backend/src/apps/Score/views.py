@@ -157,6 +157,8 @@ class AnswerCommitView(APIView):
             ]
         )
 
+        auto_grade_result = self._auto_grade_objective(score) if action == "submit" else None
+
         return api_response(
             ResponseCode.SUCCESS,
             "答案保存成功" if action == "save" else "答案提交成功",
@@ -166,8 +168,74 @@ class AnswerCommitView(APIView):
                 "last_client_ts": score.last_client_ts,
                 "last_save_at": score.last_save_at,
                 "submitted_at": score.submitted_at,
+                "auto_grade": auto_grade_result,
             },
         )
+
+    def _auto_grade_objective(self, score):
+        exam = Exam.objects.filter(id=score.exam_id).only("id", "paper_id").first()
+        if exam is None:
+            return {
+                "auto_graded_count": 0,
+                "subjective_pending_count": 0,
+                "result_mark": score.result_mark,
+            }
+
+        pq_list = list(PaperQuestions.objects.filter(paper_id=exam.paper_id).values("question_id", "marks"))
+        q_ids = [x["question_id"] for x in pq_list]
+        q_map = {q.id: q for q in Questions.objects.filter(id__in=q_ids).only("id", "type", "answer")}
+        marks_map = {x["question_id"]: float(x["marks"]) for x in pq_list}
+        answers = {
+            a.question_id: a
+            for a in Answer.objects.filter(exam_result_id=score.id, question_id__in=q_ids).only("question_id", "answer_payload")
+        }
+
+        graded = 0
+        subjective_pending = 0
+        now = timezone.now()
+        for qid in q_ids:
+            q = q_map.get(qid)
+            if q is None:
+                continue
+            if q.type not in ["select", "judge"]:
+                subjective_pending += 1
+                continue
+
+            ans = answers.get(qid)
+            student_val = self._normalize_answer(ans.answer_payload if ans else {})
+            standard_val = self._normalize_answer({"value": q.answer})
+            mark = marks_map.get(qid, 0.0) if student_val == standard_val else 0.0
+
+            detail, _ = ScoreDetail.objects.get_or_create(
+                exam_result_id=score.id,
+                question_id=qid,
+                defaults={"mark": mark, "comment": "自动判分", "graded_by": "system", "graded_at": now},
+            )
+            detail.mark = mark
+            detail.comment = "自动判分"
+            detail.graded_by = "system"
+            detail.graded_at = now
+            detail.save(update_fields=["mark", "comment", "graded_by", "graded_at"])
+            graded += 1
+
+        total = ScoreDetail.objects.filter(exam_result_id=score.id).aggregate(total_mark=Sum("mark")).get("total_mark") or 0
+        score.result_mark = float(total)
+        score.save(update_fields=["result_mark", "updated_at"])
+
+        return {
+            "auto_graded_count": graded,
+            "subjective_pending_count": subjective_pending,
+            "result_mark": score.result_mark,
+        }
+
+    def _normalize_answer(self, payload):
+        if isinstance(payload, dict):
+            value = payload.get("value", "")
+        else:
+            value = payload
+        if isinstance(value, list):
+            value = ",".join(str(x).strip().upper() for x in value)
+        return str(value).strip().upper()
 
     def get(self, request, **kwargs):
         exam_result_id = kwargs.get("id") or request.query_params.get("exam_result_id")

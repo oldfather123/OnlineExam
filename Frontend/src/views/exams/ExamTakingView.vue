@@ -2,6 +2,7 @@
 import { ClipboardCheck, Edit3, EyeOff, Megaphone, Plus, RefreshCw, Save, SendHorizontal, Trash2 } from "lucide-vue-next";
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
+import { useRouter } from "vue-router";
 
 import {
   createExam,
@@ -30,6 +31,7 @@ interface EnterForm {
 
 const activeTab = ref("manage");
 const session = useSessionStore();
+const router = useRouter();
 const loading = ref(false);
 const savingExam = ref(false);
 const statusChanging = ref("");
@@ -269,6 +271,15 @@ async function saveAnswers(action: "save" | "submit") {
       answers: buildAnswerItems(),
     });
     ElMessage.success(action === "save" ? "答案已保存" : "答卷已提交");
+    if (action === "submit") {
+      onlinePaper.value = null;
+      enterResult.value = null;
+      Object.keys(answers).forEach((key) => delete answers[key]);
+      await loadAttendableExams();
+      if (session.role === "student") {
+        await router.push("/analysis");
+      }
+    }
   } finally {
     loadingTarget.value = false;
   }
