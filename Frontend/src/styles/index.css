@@ -283,6 +283,91 @@ a {
   gap: 4px;
 }
 
+.detail-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.detail-title h2,
+.detail-title p {
+  margin: 0;
+}
+
+.detail-title h2 {
+  font-size: 22px;
+}
+
+.detail-title p {
+  margin-top: 6px;
+  color: #5e6b7c;
+}
+
+.score-summary {
+  display: grid;
+  gap: 6px;
+  min-width: 160px;
+  color: #526071;
+  text-align: right;
+}
+
+.score-summary strong {
+  color: #1f2937;
+}
+
+.module-collapse {
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.module-collapse .el-collapse-item__header {
+  padding: 0 18px;
+}
+
+.module-collapse .el-collapse-item__content {
+  padding: 18px;
+}
+
+.module-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-right: 16px;
+}
+
+.module-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+
+.drawer-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.drawer-tools,
+.drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.drawer-footer {
+  justify-content: flex-end;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     display: block;
@@ -322,5 +407,14 @@ a {
   .pagination-row {
     justify-content: flex-start;
     overflow-x: auto;
+  }
+
+  .detail-header,
+  .module-actions {
+    display: grid;
+  }
+
+  .score-summary {
+    text-align: left;
   }
 }

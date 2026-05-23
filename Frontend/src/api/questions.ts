@@ -53,3 +53,11 @@ export function deleteQuestion(id: string) {
     method: "DELETE",
   });
 }
+
+export function getPaperAvailableQuestions(params: Pick<QuestionQuery, "topic" | "type">) {
+  return request<Question[]>({
+    url: "/questions/paper-available",
+    method: "GET",
+    params,
+  });
+}

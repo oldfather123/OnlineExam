@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { Edit3, EyeOff, Megaphone, Plus, RefreshCw, Search, Trash2 } from "lucide-vue-next";
+import { Edit3, EyeOff, Megaphone, Plus, RefreshCw, Search, Settings, Trash2 } from "lucide-vue-next";
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from "element-plus";
 import { computed, onMounted, reactive, ref } from "vue";
+import { useRouter } from "vue-router";
 
 import {
   createPaper,
@@ -30,6 +31,7 @@ const editingId = ref("");
 const formRef = ref<FormInstance>();
 const papers = ref<Paper[]>([]);
 const total = ref(0);
+const router = useRouter();
 
 const query = reactive<PaperQuery>({
   title: "",
@@ -104,6 +106,10 @@ function openEditDialog(row: Paper) {
     is_published: row.is_published,
   });
   dialogVisible.value = true;
+}
+
+function openConfigure(row: Paper) {
+  void router.push(`/papers/${row.id}/configure`);
 }
 
 async function submitForm() {
@@ -227,8 +233,11 @@ onMounted(() => {
 
         <el-table-column prop="updated_at" label="更新时间" width="190" />
 
-        <el-table-column label="操作" width="210" fixed="right">
+        <el-table-column label="操作" width="260" fixed="right">
           <template #default="{ row }">
+            <el-tooltip content="配置试卷">
+              <el-button circle type="primary" :icon="Settings" @click="openConfigure(row)" />
+            </el-tooltip>
             <el-tooltip content="编辑">
               <el-button circle :icon="Edit3" @click="openEditDialog(row)" />
             </el-tooltip>

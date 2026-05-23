@@ -29,6 +29,12 @@ const router = createRouter({
           meta: { title: "试卷管理", module: "papers" },
         },
         {
+          path: "papers/:id/configure",
+          name: "paper-configure",
+          component: () => import("@/views/papers/PaperConfigureView.vue"),
+          meta: { title: "试卷配置", module: "papers" },
+        },
+        {
           path: "exams",
           name: "exams",
           component: () => import("@/views/PlaceholderView.vue"),
