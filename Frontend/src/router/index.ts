@@ -53,6 +53,12 @@ const router = createRouter({
           component: () => import("@/views/reviews/ReviewsView.vue"),
           meta: { title: "阅卷中心", module: "reviews", roles: ["teacher"] },
         },
+        {
+          path: "users",
+          name: "users",
+          component: () => import("@/views/users/UsersView.vue"),
+          meta: { title: "用户管理", module: "users", roles: ["teacher"] },
+        },
       ],
     },
   ],
