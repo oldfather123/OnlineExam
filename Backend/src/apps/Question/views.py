@@ -152,6 +152,24 @@ class ErrorArchiveView(APIView):
         paginator = Paginator(queryset, page_size)
         page_obj = paginator.get_page(page)
         data = ErrorArchiveSerializer(page_obj.object_list, many=True).data
+        q_ids = [item["question_id"] for item in data]
+        q_map = {q.id: q for q in Questions.objects.filter(id__in=q_ids)}
+        for item in data:
+            q = q_map.get(item["question_id"])
+            if q is None:
+                item["question_detail"] = None
+                continue
+            try:
+                options = json.loads(q.options)
+            except Exception:
+                options = q.options
+            item["question_detail"] = {
+                "id": q.id,
+                "topic": q.topic,
+                "options": options,
+                "answer": q.answer,
+                "type": q.type,
+            }
         return api_response(ResponseCode.SUCCESS, "查询成功", {"total": paginator.count, "data": data})
 
     def put(self, request, **kwargs):

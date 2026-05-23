@@ -23,6 +23,21 @@ export interface PageResult<T> {
   data: T[];
 }
 
+export interface ErrorArchive {
+  id: string;
+  question_id: string;
+  collector: string;
+  explanation: string;
+  created_at: string;
+  question_detail?: {
+    id: string;
+    topic: string;
+    options: string[] | string;
+    answer: string;
+    type: QuestionType;
+  } | null;
+}
+
 export function getQuestions(params: QuestionQuery) {
   return request<PageResult<Question>>({
     url: "/questions",
@@ -59,5 +74,37 @@ export function getPaperAvailableQuestions(params: Pick<QuestionQuery, "topic" |
     url: "/questions/paper-available",
     method: "GET",
     params,
+  });
+}
+
+export function getErrorArchives(params: { collector: string; topic?: string; currentPage?: number; pageSize?: number }) {
+  return request<PageResult<ErrorArchive>>({
+    url: "/error-archives",
+    method: "GET",
+    params,
+  });
+}
+
+export function createErrorArchive(data: Pick<ErrorArchive, "collector" | "question_id"> & { explanation?: string }) {
+  return request<ErrorArchive>({
+    url: "/error-archives",
+    method: "POST",
+    data,
+  });
+}
+
+export function updateErrorArchive(id: string, data: Partial<Pick<ErrorArchive, "explanation">>) {
+  return request<ErrorArchive>({
+    url: `/error-archives/${id}`,
+    method: "PUT",
+    data,
+  });
+}
+
+export function deleteErrorArchive(collector: string, questionId: string) {
+  return request<null>({
+    url: "/error-archives",
+    method: "DELETE",
+    data: { collector, question_id: questionId },
   });
 }

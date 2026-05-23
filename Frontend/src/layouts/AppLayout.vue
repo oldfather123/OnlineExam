@@ -15,6 +15,7 @@ const menuItems = [
   { path: "/papers", label: "试卷管理", icon: ScrollText, roles: ["teacher"] },
   { path: "/exams", label: "考试管理", icon: ClipboardList, roles: ["teacher", "student"] },
   { path: "/analysis", label: "成绩分析", icon: TrendingUp, roles: ["student"] },
+  { path: "/errors", label: "错题集", icon: FileQuestion, roles: ["student"] },
   { path: "/reviews", label: "阅卷中心", icon: PenLine, roles: ["teacher"] },
   { path: "/users", label: "用户管理", icon: UsersRound, roles: ["teacher"] },
 ];

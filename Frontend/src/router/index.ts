@@ -54,6 +54,12 @@ const router = createRouter({
           meta: { title: "成绩分析", module: "analysis", roles: ["student"] },
         },
         {
+          path: "errors",
+          name: "errors",
+          component: () => import("@/views/errors/ErrorArchivesView.vue"),
+          meta: { title: "错题集", module: "errors", roles: ["student"] },
+        },
+        {
           path: "reviews",
           name: "reviews",
           component: () => import("@/views/reviews/ReviewsView.vue"),
