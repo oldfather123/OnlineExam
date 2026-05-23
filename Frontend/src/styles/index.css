@@ -146,6 +146,47 @@ a {
   gap: 18px;
 }
 
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  display: grid;
+  gap: 10px;
+  min-height: 140px;
+  padding: 20px;
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.stat-card span {
+  color: #5e6b7c;
+}
+
+.stat-card strong {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.stat-card.teal svg {
+  color: #0f766e;
+}
+
+.stat-card.blue svg {
+  color: #2563eb;
+}
+
+.stat-card.amber svg {
+  color: #b45309;
+}
+
+.stat-card.rose svg {
+  color: #be123c;
+}
+
 .module-card {
   display: grid;
   gap: 14px;

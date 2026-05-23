@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 from src.apps.Exam.models import Exam
 from src.apps.Paper.models import Paper, PaperQuestions
 from src.apps.Question.models import Questions
+from src.apps.Question.models import ErrorArchive
+from src.apps.User.models import Student, Teacher
 from src.utils.response_utils import ResponseCode, api_response
 
 from .models import Answer, Score, ScoreDetail
@@ -289,6 +291,56 @@ class ScoreAnalyzeView(APIView):
                 "average_score": average_score,
                 "trend": trend,
                 "question_type_stats": question_type_stats,
+            },
+        )
+
+
+class DashboardSummaryView(APIView):
+    def get(self, request):
+        role = request.query_params.get("role", "teacher")
+        user_id = request.query_params.get("user_id")
+
+        if role == "student":
+            if not user_id:
+                return api_response(ResponseCode.BAD_REQUEST, "user_id 为必填项")
+
+            scores = Score.objects.filter(student_id=user_id)
+            submitted = scores.filter(submit_status=True)
+            average_score = 0.0
+            if submitted.exists():
+                average_score = round(
+                    sum(float(item.result_mark or 0) for item in submitted) / submitted.count(),
+                    2,
+                )
+
+            now = timezone.now()
+            upcoming_exams = Exam.objects.filter(is_deleted=False, is_published=True, end_time__gte=now).count()
+            return api_response(
+                ResponseCode.SUCCESS,
+                "查询工作台成功",
+                {
+                    "role": "student",
+                    "exam_count": scores.count(),
+                    "submitted_count": submitted.count(),
+                    "average_score": average_score,
+                    "upcoming_exam_count": upcoming_exams,
+                    "error_archive_count": ErrorArchive.objects.filter(collector=user_id).count(),
+                },
+            )
+
+        waiting_review_count = Score.objects.filter(submit_status=True, end_time__isnull=True).count()
+        return api_response(
+            ResponseCode.SUCCESS,
+            "查询工作台成功",
+            {
+                "role": "teacher",
+                "question_count": Questions.objects.count(),
+                "paper_count": Paper.objects.count(),
+                "exam_count": Exam.objects.filter(is_deleted=False).count(),
+                "student_count": Student.objects.count(),
+                "teacher_count": Teacher.objects.count(),
+                "submitted_count": Score.objects.filter(submit_status=True).count(),
+                "waiting_review_count": waiting_review_count,
             },
         )
 

@@ -8,6 +8,7 @@ from .views import (
     ReviewExamResultDetailView,
     ReviewExamStudentListView,
     ReviewPaperListView,
+    DashboardSummaryView,
     ReviewScoreProcessView,
     ReviewStatisticsView,
     ScoreAnalyzeView,
@@ -21,6 +22,7 @@ urlpatterns = [
     path("scores/detail", ScoreDetailView.as_view(), name="score-detail-view"),
     path("scores/detail/<str:id>", ScoreDetailView.as_view(), name="score-detail-item"),
     path("scores/analyze", ScoreAnalyzeView.as_view(), name="score-analyze"),
+    path("dashboard/summary", DashboardSummaryView.as_view(), name="dashboard-summary"),
 
     # student answer APIs
     path("answers", AnswerGetView.as_view(), name="answer-get"),
