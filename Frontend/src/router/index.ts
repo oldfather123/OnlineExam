@@ -19,7 +19,7 @@ const router = createRouter({
         {
           path: "questions",
           name: "questions",
-          component: () => import("@/views/PlaceholderView.vue"),
+          component: () => import("@/views/questions/QuestionsView.vue"),
           meta: { title: "题库管理", module: "questions" },
         },
         {

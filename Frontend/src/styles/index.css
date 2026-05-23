@@ -204,6 +204,85 @@ a {
   background: #ffffff;
 }
 
+.page-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.toolbar-panel,
+.table-panel {
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.toolbar-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+}
+
+.query-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.query-form .el-form-item {
+  margin-bottom: 0;
+}
+
+.type-select {
+  width: 160px;
+}
+
+.table-panel {
+  padding: 18px;
+}
+
+.topic-cell {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.6;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.muted-text {
+  color: #5e6b7c;
+}
+
+.pagination-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 18px;
+}
+
+.option-editor {
+  display: grid;
+  width: 100%;
+  gap: 10px;
+}
+
+.option-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  gap: 10px;
+}
+
+.judge-options {
+  display: flex;
+  gap: 10px;
+}
+
+.judge-options .el-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     display: block;
@@ -230,5 +309,18 @@ a {
 
   .summary-band h2 {
     font-size: 24px;
+  }
+
+  .toolbar-panel {
+    display: grid;
+  }
+
+  .type-select {
+    width: 100%;
+  }
+
+  .pagination-row {
+    justify-content: flex-start;
+    overflow-x: auto;
   }
 }
