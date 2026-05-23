@@ -25,7 +25,7 @@ const router = createRouter({
         {
           path: "papers",
           name: "papers",
-          component: () => import("@/views/PlaceholderView.vue"),
+          component: () => import("@/views/papers/PapersView.vue"),
           meta: { title: "试卷管理", module: "papers" },
         },
         {

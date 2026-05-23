@@ -50,3 +50,19 @@ export function deletePaper(id: string) {
     method: "DELETE",
   });
 }
+
+export function publishPaper(id: string) {
+  return request<null>({
+    url: "/papers/publish",
+    method: "POST",
+    data: { id },
+  });
+}
+
+export function unpublishPaper(id: string) {
+  return request<null>({
+    url: "/papers/publish",
+    method: "DELETE",
+    data: { id },
+  });
+}
