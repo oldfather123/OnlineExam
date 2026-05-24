@@ -12,8 +12,8 @@
 - 后端服务已启动
 
 用法：
-python test_03_question_crud.py
-python test_03_question_crud.py --base-url http://127.0.0.1:8000
+python tests/test_03_question_crud.py
+python tests/test_03_question_crud.py --base-url http://127.0.0.1:8000
 """
 
 import argparse

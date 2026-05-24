@@ -10,9 +10,9 @@
 - 已先运行 test_01_create_accounts.py（或你已手动创建账号）
 
 用法：
-python test_02_login.py
-python test_02_login.py --base-url http://127.0.0.1:8000
-python test_02_login.py --teacher-username teacher_demo --student-username student_demo --password 123456
+python tests/test_02_login.py
+python tests/test_02_login.py --base-url http://127.0.0.1:8000
+python tests/test_02_login.py --teacher-username teacher_demo --student-username student_demo --password 123456
 """
 
 import argparse

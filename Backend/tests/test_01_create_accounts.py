@@ -7,8 +7,8 @@
 - 若账号已存在，给出提示并跳过
 
 运行：
-python test_01_create_accounts.py
-python test_01_create_accounts.py --base-url http://127.0.0.1:8000
+python tests/test_01_create_accounts.py
+python tests/test_01_create_accounts.py --base-url http://127.0.0.1:8000
 """
 
 import argparse
