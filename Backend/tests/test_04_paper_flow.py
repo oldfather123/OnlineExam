@@ -52,9 +52,7 @@ def is_ok(status, data):
 
 
 def create_question(base_url, topic, answer="A"):
-    qid = str(uuid.uuid4())
     payload = {
-        "id": qid,
         "topic": topic,
         "options": "[\"A\",\"B\",\"C\",\"D\"]",
         "answer": answer,
@@ -66,7 +64,7 @@ def create_question(base_url, topic, answer="A"):
     if not ok:
         print("  response:", data)
         return None
-    return qid
+    return data.get("data", {}).get("id")
 
 
 def main():
@@ -84,9 +82,7 @@ def main():
         sys.exit(1)
 
     # 2) 创建试卷
-    paper_id = str(uuid.uuid4())
     create_paper_payload = {
-        "id": paper_id,
         "title": f"测试试卷-{seed}",
         "description": "自动化测试生成",
         "duration_minutes": 60,
@@ -97,6 +93,11 @@ def main():
     ok_paper = is_ok(status, data)
     print(f"[{'OK' if ok_paper else 'FAIL'}] 创建试卷 -> status={status}")
     if not ok_paper:
+        print("  response:", data)
+        sys.exit(1)
+    paper_id = data.get("data", {}).get("id")
+    if not paper_id:
+        print("[FAIL] 创建试卷成功但未返回 paper_id")
         print("  response:", data)
         sys.exit(1)
 

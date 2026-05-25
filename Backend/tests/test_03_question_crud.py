@@ -59,12 +59,10 @@ def main():
 
     base_url = args.base_url.rstrip("/")
 
-    question_id = str(uuid.uuid4())
-    topic_seed = question_id[:8]
+    topic_seed = str(uuid.uuid4())[:8]
 
     # 1) 创建题目
     create_payload = {
-        "id": question_id,
         "topic": f"测试题目-{topic_seed}",
         "options": "[\"A\",\"B\",\"C\",\"D\"]",
         "answer": "A",
@@ -74,6 +72,12 @@ def main():
     ok_create = is_ok(status, data)
     print(f"[{'OK' if ok_create else 'FAIL'}] 创建题目 -> status={status}")
     if not ok_create:
+        print("  response:", data)
+        sys.exit(1)
+
+    question_id = data.get("data", {}).get("id")
+    if not question_id:
+        print("[FAIL] 创建成功但未返回 question_id")
         print("  response:", data)
         sys.exit(1)
 

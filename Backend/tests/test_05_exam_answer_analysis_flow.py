@@ -54,9 +54,7 @@ def is_ok(status, data):
 
 
 def create_question(base_url, topic, answer):
-    qid = str(uuid.uuid4())
     payload = {
-        "id": qid,
         "topic": topic,
         "options": "[\"A\",\"B\",\"C\",\"D\"]",
         "answer": answer,
@@ -68,7 +66,7 @@ def create_question(base_url, topic, answer):
     if not ok:
         print("  response:", data)
         return None
-    return qid
+    return data.get("data", {}).get("id")
 
 
 def main():
@@ -88,9 +86,7 @@ def main():
         sys.exit(1)
 
     # 2) 创建试卷 + 模块 + 关联 + 发布
-    paper_id = str(uuid.uuid4())
     paper_payload = {
-        "id": paper_id,
         "title": f"学习分析试卷-{seed}",
         "description": "自动化流程测试",
         "duration_minutes": 30,
@@ -101,6 +97,11 @@ def main():
     ok = is_ok(s, d)
     print(f"[{'OK' if ok else 'FAIL'}] 创建试卷 -> status={s}")
     if not ok:
+        print("  response:", d)
+        sys.exit(1)
+    paper_id = d.get("data", {}).get("id")
+    if not paper_id:
+        print("[FAIL] 创建试卷成功但未返回 paper_id")
         print("  response:", d)
         sys.exit(1)
 
@@ -145,9 +146,7 @@ def main():
     start_time = (now - timedelta(minutes=1)).isoformat()
     end_time = (now + timedelta(minutes=30)).isoformat()
 
-    exam_id = str(uuid.uuid4())
     exam_payload = {
-        "id": exam_id,
         "title": f"学习分析考试-{seed}",
         "paper_id": paper_id,
         "start_time": start_time,
@@ -158,6 +157,12 @@ def main():
     ok = is_ok(s, d)
     print(f"[{'OK' if ok else 'FAIL'}] 创建考试 -> status={s}")
     if not ok:
+        print("  response:", d)
+        sys.exit(1)
+
+    exam_id = d.get("data", {}).get("id")
+    if not exam_id:
+        print("[FAIL] 创建考试成功但未返回 exam_id")
         print("  response:", d)
         sys.exit(1)
 
